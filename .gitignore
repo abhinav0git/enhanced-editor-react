@@ -20,9 +20,10 @@ dist-ssr
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
+*.sln   
 *.sw?
 
 # custom
 enhanced-editor.html
 enhanced-editor-fixed (2).html
+*.md

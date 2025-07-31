@@ -1,17 +1,36 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 
-// A utility function to get a unique CSS selector for an element.
+// --- ROBUST getElementPath FUNCTION WITH THE FINAL FIX ---
 export const getElementPath = (el) => {
-    if (!(el instanceof Element)) return;
+    // THE FIX IS HERE:
+    // We now check `nodeType` instead of `instanceof Element`.
+    // An element node will always have a nodeType of 1. This works across iframe boundaries.
+    if (!el || el.nodeType !== 1) { 
+        console.error("[getElementPath] Invalid target received. Not an element node.", el);
+        return null;
+    }
+    
+    if (el.tagName === 'BODY' || el.tagName === 'HTML') {
+        return 'body';
+    }
+
     const path = [];
-    while (el.nodeType === Node.ELEMENT_NODE) {
-        let selector = el.nodeName.toLowerCase();
-        if (el.id) {
-            selector += `#${el.id}`;
+    let currentEl = el;
+
+    while (currentEl && currentEl.nodeType === Node.ELEMENT_NODE) {
+        let selector = currentEl.nodeName.toLowerCase();
+
+        if (selector === 'body') {
             path.unshift(selector);
-            break; // IDs are unique, no need to go further
+            break;
+        }
+
+        if (currentEl.id) {
+            selector += `#${currentEl.id}`;
+            path.unshift(selector);
+            break; 
         } else {
-            let sib = el;
+            let sib = currentEl;
             let nth = 1;
             while (sib = sib.previousElementSibling) {
                 if (sib.nodeName.toLowerCase() === selector) nth++;
@@ -19,197 +38,143 @@ export const getElementPath = (el) => {
             if (nth !== 1) selector += `:nth-of-type(${nth})`;
         }
         path.unshift(selector);
-        el = el.parentNode;
+        currentEl = currentEl.parentNode;
     }
+
+    if (path.length === 0) {
+        console.warn("[getElementPath] Could not generate a path for element:", el);
+        return null;
+    }
+
     return path.join(' > ');
 };
 
-// Create the context
-const EditorContext = createContext();
 
-// Custom hook to use the editor context
+const EditorContext = createContext();
 export const useEditor = () => useContext(EditorContext);
 
-// The provider component that wraps the application
 export const EditorProvider = ({ children }) => {
-    // --- STATE MANAGEMENT ---
     const [htmlFile, setHtmlFile] = useState(null);
-    const [editorReady, setEditorReady] = useState(false); // Crucial flag for iframe readiness
+    const [editorReady, setEditorReady] = useState(false);
     const [currentMode, setCurrentMode] = useState('text');
     const [selectedElementPaths, setSelectedElementPaths] = useState([]);
     const [documentState, setDocumentState] = useState({ original: '', current: '' });
     const [historyState, setHistoryState] = useState({ stack: [], currentIndex: -1 });
     const [controlledElementPath, setControlledElementPath] = useState(null);
-    
-    // --- REFS ---
+    const [motionActive, setMotionActive] = useState(false);
+    const [motionSettings, setMotionSettings] = useState({ pattern: 'grid', speed: 5, pause: 2 });
+    const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0 });
+
     const iframeRef = useRef(null);
-    const isRestoringHistory = useRef(false); // Prevents feedback loop on undo/redo
+    const isRestoringHistory = useRef(false);
     const MAX_HISTORY = 50;
-
-    // --- HISTORY MANAGEMENT ---
-
-    /**
-     * Loads a new HTML file, resets the editor, and initializes the history stack.
-     */
-    const loadHtmlFile = (file) => {
-        if (file && file.type === 'text/html') {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const content = e.target.result;
-                console.log("📄 [HISTORY] File loaded. Resetting history stack with initial content.");
-                setDocumentState({ original: content, current: content });
-                setHistoryState({ stack: [content], currentIndex: 0 });
-                setSelectedElementPaths([]);
-                setEditorReady(false); // Set to false until iframe reloads
-            };
-            reader.readAsText(file);
-            setHtmlFile(file);
+    
+    const logSetContextMenu = (valueOrFn) => {
+        if (typeof valueOrFn === 'function') {
+            setContextMenu(prevState => {
+                const newState = valueOrFn(prevState);
+                console.log("🍔 [CONTEXT] Setting context menu state (using function):", newState);
+                return newState;
+            });
+        } else {
+            console.log("🍔 [CONTEXT] Setting context menu state:", valueOrFn);
+            setContextMenu(valueOrFn);
         }
     };
 
-    /**
-     * Saves the current state of the iframe's HTML to the history stack.
-     * This function is memoized with useCallback to be stable.
-     * It depends on `editorReady` to ensure it doesn't run before the iframe is loaded.
-     */
     const saveStateToHistory = useCallback(() => {
-        // Gatekeeper: Don't save if the editor isn't ready or if we are in the middle of an undo/redo.
-        if (!editorReady || isRestoringHistory.current) {
-            console.warn(`🎨 [HISTORY] Save blocked. EditorReady: ${editorReady}, IsRestoring: ${isRestoringHistory.current}`);
-            return;
-        }
-
+        if (!editorReady || isRestoringHistory.current) return;
         const iframeDoc = iframeRef.current?.contentDocument;
-        if (!iframeDoc) {
-             console.error("🎨 [HISTORY] Save failed: iframe document not found.");
-             return;
-        }
-
-        // Clone the document and clean up editor-specific classes before saving.
+        if (!iframeDoc) return;
         const clonedDoc = iframeDoc.cloneNode(true);
         clonedDoc.querySelectorAll('.editor-selected, .editor-hover, .editable-text-hover').forEach(el => {
             el.classList.remove('editor-selected', 'editor-hover', 'editable-text-hover');
         });
         const currentState = clonedDoc.documentElement.outerHTML;
-
-        // Use a functional update to safely modify the history state.
         setHistoryState(prevState => {
-            // Prevent saving identical states consecutively.
-            if (prevState.stack.length > 0 && prevState.stack[prevState.currentIndex] === currentState) {
-                console.log("🎨 [HISTORY] Save skipped: content is identical to the current state.");
-                return prevState;
-            }
-
-            // If we are undoing, we need to slice the "future" states off the stack.
+            if (prevState.stack.length > 0 && prevState.stack[prevState.currentIndex] === currentState) return prevState;
             const newStack = prevState.stack.slice(0, prevState.currentIndex + 1);
             newStack.push(currentState);
-
-            // Trim the history stack if it exceeds the maximum size.
-            if (newStack.length > MAX_HISTORY) {
-                newStack.shift();
-            }
-            
-            const newIndex = newStack.length - 1;
-            console.log(`🎨 [HISTORY] State saved. New index: ${newIndex}, Stack size: ${newStack.length}`);
-
-            return {
-                stack: newStack,
-                currentIndex: newIndex,
-            };
+            if (newStack.length > MAX_HISTORY) newStack.shift();
+            return { stack: newStack, currentIndex: newStack.length - 1 };
         });
-    }, [editorReady]); // Dependency: Re-create this function only when editorReady changes.
+    }, [editorReady]);
 
-    /**
-     * Moves back one step in the history stack.
-     */
     const undo = useCallback(() => {
         setHistoryState(prevState => {
             if (prevState.currentIndex > 0) {
-                console.log(`⏪ [HISTORY] Undo to index: ${prevState.currentIndex - 1}`);
-                isRestoringHistory.current = true; // Set flag to prevent immediate re-saving
+                isRestoringHistory.current = true;
                 const newIndex = prevState.currentIndex - 1;
                 setDocumentState(doc => ({ ...doc, current: prevState.stack[newIndex] }));
                 setSelectedElementPaths([]);
                 return { ...prevState, currentIndex: newIndex };
             }
-            console.warn("⏪ [HISTORY] Undo blocked: at the beginning of the stack.");
             return prevState;
         });
     }, []);
-
-    /**
-     * Moves forward one step in the history stack.
-     */
+    
     const redo = useCallback(() => {
         setHistoryState(prevState => {
             if (prevState.currentIndex < prevState.stack.length - 1) {
-                console.log(`⏩ [HISTORY] Redo to index: ${prevState.currentIndex + 1}`);
-                isRestoringHistory.current = true; // Set flag
+                isRestoringHistory.current = true;
                 const newIndex = prevState.currentIndex + 1;
                 setDocumentState(doc => ({ ...doc, current: prevState.stack[newIndex] }));
                 setSelectedElementPaths([]);
                 return { ...prevState, currentIndex: newIndex };
             }
-            console.warn("⏩ [HISTORY] Redo blocked: at the end of the stack.");
             return prevState;
         });
     }, []);
 
-    /**
-     * Resets the document to its original state when first loaded.
-     */
     const resetToOriginal = useCallback(() => {
         if (window.confirm('Are you sure you want to reset all changes?')) {
-            console.log("🔄 [HISTORY] Resetting to original content.");
-            isRestoringHistory.current = true; // Set flag
+            isRestoringHistory.current = true;
             setDocumentState(prev => ({ ...prev, current: prev.original }));
             setHistoryState({ stack: [documentState.original], currentIndex: 0 });
             setSelectedElementPaths([]);
         }
     }, [documentState.original]);
 
-    // This effect resets the `isRestoringHistory` flag after a state restoration is complete.
     useEffect(() => {
         if (isRestoringHistory.current) {
-            // We use a short timeout to allow React to finish its render cycle.
-            const timer = setTimeout(() => {
-                console.log("🛠️ [HISTORY] Restoration complete. Re-enabling history saving.");
-                isRestoringHistory.current = false;
-            }, 100);
+            const timer = setTimeout(() => { isRestoringHistory.current = false; }, 100);
             return () => clearTimeout(timer);
         }
-    }, [documentState.current]); // This effect runs whenever the iframe content changes.
+    }, [documentState.current]);
 
-
-    // --- OTHER EDITOR FUNCTIONS ---
-
-    const updateElementStyle = (property, value) => {
-        const iframeDoc = iframeRef.current?.contentDocument;
-        if (!iframeDoc || selectedElementPaths.length === 0) return;
-        selectedElementPaths.forEach(path => {
-            const el = iframeDoc.querySelector(path);
-            if (el) el.style[property] = value;
-        });
-        // Note: We might want to debounce this before saving
-        setTimeout(saveStateToHistory, 50);
+    const loadHtmlFile = (file) => {
+        if (file && file.type === 'text/html') {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                setDocumentState({ original: content, current: content });
+                setHistoryState({ stack: [content], currentIndex: 0 });
+                setSelectedElementPaths([]);
+                setEditorReady(false);
+            };
+            reader.readAsText(file);
+            setHtmlFile(file);
+        }
     };
-
+    
     const deleteSelectedElements = () => {
-        const iframeDoc = iframeRef.current?.contentDocument;
-        if (!iframeDoc || selectedElementPaths.length === 0) return;
-        selectedElementPaths.forEach(path => {
-            iframeDoc.querySelector(path)?.remove();
-        });
-        setSelectedElementPaths([]);
-        setTimeout(saveStateToHistory, 0);
+        if (selectedElementPaths.length === 0) return;
+        if (window.confirm(`Delete ${selectedElementPaths.length} element(s)?`)) {
+            const iframeDoc = iframeRef.current?.contentDocument;
+            if (!iframeDoc) return;
+            selectedElementPaths.forEach(path => iframeDoc.querySelector(path)?.remove());
+            setSelectedElementPaths([]);
+            setTimeout(saveStateToHistory, 0);
+        }
     };
 
     const duplicateSelectedElements = () => {
-        const iframeDoc = iframeRef.current?.contentDocument;
-        if (!iframeDoc || selectedElementPaths.length !== 1) {
+        if (selectedElementPaths.length !== 1) {
             alert("Please select exactly one element to duplicate.");
             return;
         }
+        const iframeDoc = iframeRef.current?.contentDocument;
+        if (!iframeDoc) return;
         const el = iframeDoc.querySelector(selectedElementPaths[0]);
         if (el) {
             const clone = el.cloneNode(true);
@@ -219,6 +184,43 @@ export const EditorProvider = ({ children }) => {
         }
     };
 
+    const bringToFront = () => {
+        const iframeDoc = iframeRef.current?.contentDocument;
+        if (!iframeDoc || selectedElementPaths.length === 0) return;
+        const allElements = Array.from(iframeDoc.querySelectorAll('body *'));
+        const maxZ = allElements.reduce((max, el) => {
+            const z = parseInt(window.getComputedStyle(el).zIndex, 10);
+            return isNaN(z) ? max : Math.max(max, z);
+        }, 0);
+        console.log(`🎬 Action: Bring to Front. New z-index will be ${maxZ + 1}`);
+        selectedElementPaths.forEach(path => {
+            const el = iframeDoc.querySelector(path);
+            if (el) el.style.zIndex = maxZ + 1;
+        });
+        setTimeout(saveStateToHistory, 0);
+    };
+
+    const sendToBack = () => {
+        const iframeDoc = iframeRef.current?.contentDocument;
+        if (!iframeDoc || selectedElementPaths.length === 0) return;
+        console.log(`🎬 Action: Send to Back. New z-index will be 0`);
+        selectedElementPaths.forEach(path => {
+            const el = iframeDoc.querySelector(path);
+            if (el) el.style.zIndex = 0;
+        });
+        setTimeout(saveStateToHistory, 0);
+    };
+
+    const updateElementStyle = (property, value) => { 
+        const iframeDoc = iframeRef.current?.contentDocument;
+        if (!iframeDoc || selectedElementPaths.length === 0) return;
+        selectedElementPaths.forEach(path => {
+            const el = iframeDoc.querySelector(path);
+            if (el) el.style[property] = value;
+        });
+        setTimeout(saveStateToHistory, 50);
+    };
+    
     const releaseControlledElement = () => {
         const iframeDoc = iframeRef.current?.contentDocument;
         if (!controlledElementPath || !iframeDoc) return;
@@ -226,15 +228,17 @@ export const EditorProvider = ({ children }) => {
         setControlledElementPath(null);
     };
 
-    // --- CONTEXT VALUE ---
-    // The value that will be available to all consumer components.
     const value = {
         htmlFile, documentState, loadHtmlFile, editorReady, setEditorReady, currentMode,
         setCurrentMode, selectedElementPaths, setSelectedElementPaths, iframeRef, updateElementStyle,
         saveStateToHistory, deleteSelectedElements, duplicateSelectedElements,
         undo, redo, resetToOriginal,
         historyState,
-        controlledElementPath, setControlledElementPath, releaseControlledElement
+        motionActive, setMotionActive, motionSettings, setMotionSettings, controlledElementPath, 
+        setControlledElementPath, releaseControlledElement,
+        contextMenu, 
+        setContextMenu: logSetContextMenu,
+        bringToFront, sendToBack,
     };
 
     return (

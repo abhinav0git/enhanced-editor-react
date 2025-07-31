@@ -597,3 +597,51 @@ body {
     font-size: 0.85em;
     opacity: 0.7;
 }
+
+/* --- Context Menu --- */
+.context-menu {
+    position: fixed; /* Position relative to the viewport */
+    z-index: 10002; /* Ensure it's on top of everything */
+    background-color: var(--color-panel-bg);
+    border: var(--border-width) solid var(--color-border);
+    box-shadow: 6px 6px 0px var(--color-border);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 180px;
+}
+
+.context-menu-title {
+    font-family: var(--font-heading);
+    font-size: 0.9em;
+    text-transform: uppercase;
+    color: var(--color-text);
+    padding: 4px 8px;
+    margin-bottom: 5px;
+    border-bottom: 2px solid var(--color-border);
+    text-align: center;
+}
+
+.context-menu-item {
+    width: 100%;
+    padding: 10px 12px;
+    font-family: var(--font-main);
+    font-size: 0.95em;
+    text-align: left;
+    background-color: white;
+    border: 2px solid var(--color-border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.context-menu-item:hover {
+    background-color: var(--color-accent-primary);
+    color: var(--color-accent-primary-text);
+    transform: translateX(4px);
+}
+
+.context-menu-item.danger:hover {
+    background-color: #ffb3b3;
+    color: #8b3a3a;
+}

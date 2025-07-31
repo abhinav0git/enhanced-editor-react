@@ -28,9 +28,9 @@ const ControlsPanel = () => {
       <MotionSettings /> {/* Add our new component here */}
 
       {hasSelection && <PropertyEditor />}
-      {hasSelection && <Actions />}
+      {/* {hasSelection && <Actions />} */}
 
-      <div className="control-block instructions">
+      {/* {documentState.mode === "text" && <div className="control-block instructions">
         <h3>Instructions</h3>
         <ul>
           <li>
@@ -55,7 +55,7 @@ const ControlsPanel = () => {
             Press <kbd>Esc</kbd> to deselect all
           </li>
         </ul>
-      </div>
+      </div>} */}
 
       <div
         className="control-block download-block"
