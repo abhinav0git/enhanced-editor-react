@@ -12,148 +12,68 @@ const editorStyles = `
         outline-offset: 2px;
         position: relative;
     }
-    
     .editor-hover {
         outline: 2px dashed #ffcce4 !important;
         cursor: pointer !important;
     }
-    
     .editor-draggable {
         cursor: move !important;
     }
-    
     .editor-draggable:hover {
         outline: 2px dashed #ffd4a3 !important;
     }
-    
-    .editor-dragging {
-        opacity: 0.5 !important;
-        cursor: grabbing !important;
-        z-index: 9999 !important;
+    [contenteditable="true"] {
+        outline: 2px solid #a2a8d3 !important;
+        background-color: #0088ff38 !important;
     }
-    
     .editable-text-hover {
         outline: 2px dashed #ffcce4 !important;
         cursor: text !important;
         background-color: rgba(255, 204, 228, 0.1) !important;
     }
-    
-    .editable-image-hover {
-        outline: 3px dashed #d4f0df !important;
-        cursor: pointer !important;
-        opacity: 0.9 !important;
-    }
-    
-    [contenteditable="true"] {
-        outline: 2px solid #a2a8d3 !important;
-        background-color: #0088ff38 !important;
-        box-shadow: 0 0 5px rgba(162, 168, 211, 0.5);
-    }
-    
-    * {
-        user-select: none;
-        -webkit-user-select: none;
-    }
-    
-    [contenteditable="true"],
-    [contenteditable="true"] * {
-        user-select: text;
-        -webkit-user-select: text;
-    }
-    
-    /* Controlled element styles */
     .element-controlled {
         animation: gentle-pulse 3s ease-in-out infinite;
         outline: 3px solid #ff6b6b !important;
-        outline-offset: 3px;
         box-shadow: 0 0 20px rgba(255, 107, 107, 0.4);
         cursor: crosshair !important;
-        z-index: 9998 !important;
     }
-    
     @keyframes gentle-pulse {
-        0%, 100% {
-            opacity: 1;
-            transform: scale(1);
-        }
-        50% {
-            opacity: 0.85;
-            transform: scale(1.02);
-        }
+        50% { opacity: 0.85; transform: scale(1.02); }
     }
-    
-    /* Motion Mode Styles */
-    .motion-physics {
-        transition: none !important;
-    }
-    
-    .motion-cursor {
-        position: fixed;
-        width: 40px;
-        height: 40px;
-        background: radial-gradient(circle, #ff6b6b 0%, #ff6b6b 30%, transparent 70%);
-        border-radius: 50%;
-        pointer-events: none;
-        z-index: 10000;
-        box-shadow: 0 0 20px rgba(255, 107, 107, 0.6);
-        transition: all 0.3s ease;
-    }
-    
-    .motion-cursor.grabbing {
-        transform: scale(1.2);
-        background: radial-gradient(circle, #c3b3ff 0%, #c3b3ff 40%, transparent 70%);
-        box-shadow: 0 0 30px rgba(195, 179, 255, 0.8);
-    }
-    
-    .element-grabbed {
-        filter: brightness(1.3) drop-shadow(0 0 20px rgba(255, 204, 228, 0.8));
-        z-index: 9999 !important;
-        transition: all 0.3s ease;
-    }
-    
-    .element-target {
-        outline: 3px dashed #ffcce4 !important;
-        outline-offset: 5px;
-    }
-
     .element-preview-highlight {
         outline: 4px solid #ff6b6b !important;
-        outline-offset: 3px;
         box-shadow: 0 0 20px rgba(255, 107, 107, 0.4);
-        transition: all 0.2s ease;
     }
 `;
 const excludedTags = ['HTML', 'HEAD', 'BODY', 'SCRIPT', 'STYLE', 'META', 'LINK', 'TITLE'];
 
 
 const PreviewArea = () => {
-    // --- CONTEXT & STATE ---
     const {
         documentState, setEditorReady, currentMode, selectedElementPaths,
-        setSelectedElementPaths, saveStateToHistory, motionActive, setMotionActive,
-        controlledElementPath, setControlledElementPath, releaseControlledElement
+        setSelectedElementPaths, saveStateToHistory,
+        controlledElementPath, setControlledElementPath, releaseControlledElement,
+        editorReady, // Get the readiness flag from context
+        iframeRef // Get the ref from context
     } = useEditor();
 
-    const iframeRef = useRef(null);
     const listenerCleanupRef = useRef(() => {});
     const [pickerState, setPickerState] = useState({ visible: false, elements: [], position: {x: 0, y: 0} });
     
     const htmlContent = documentState.current;
 
-    // --- LISTENER SETUP LOGIC (as useCallback hooks) ---
+    // --- LISTENER SETUP LOGIC ---
 
     const setupSelectListeners = useCallback((iframeDoc) => {
         const handleMouseOver = (e) => {
-            if (!excludedTags.includes(e.target.tagName)) {
-                e.target.classList.add('editor-hover');
-            }
+            if (!excludedTags.includes(e.target.tagName)) e.target.classList.add('editor-hover');
         };
         const handleMouseOut = (e) => e.target.classList.remove('editor-hover');
         const handleClick = (e) => {
             e.preventDefault(); e.stopPropagation();
             const target = e.target;
             if (excludedTags.includes(target.tagName) || target.id === 'element-picker-root') return;
-            target.classList.remove('editor-hover');
+            
             const path = getElementPath(target);
             if (!path) return;
             
@@ -174,7 +94,6 @@ const PreviewArea = () => {
     }, [setSelectedElementPaths]);
 
     const setupTextListeners = useCallback((iframeDoc) => {
-        console.log("Setting up text listeners");
         const textElements = iframeDoc.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, a, li, th, td, blockquote, label, button, strong, em');
         
         const makeEditable = (e) => {
@@ -186,18 +105,17 @@ const PreviewArea = () => {
             
             const onBlur = () => {
                 el.removeAttribute('contenteditable');
-                el.classList.remove('editable-text-hover');
-                if (el.innerHTML !== originalContent) saveStateToHistory();
+                if (el.innerHTML !== originalContent) {
+                    console.log("📝 Text changed, saving to history.");
+                    saveStateToHistory();
+                }
                 el.removeEventListener('blur', onBlur);
             };
             el.addEventListener('blur', onBlur);
         };
         
         const handleMouseOver = e => {
-            if (e.target.closest('[contenteditable=true]')) return;
-            if (!excludedTags.includes(e.target.tagName)) {
-                 e.target.classList.add('editable-text-hover');
-            }
+            if (!e.target.closest('[contenteditable=true]')) e.target.classList.add('editable-text-hover');
         };
         const handleMouseOut = e => e.target.classList.remove('editable-text-hover');
 
@@ -212,8 +130,6 @@ const PreviewArea = () => {
                 el.removeEventListener('click', makeEditable);
                 el.removeEventListener('mouseover', handleMouseOver);
                 el.removeEventListener('mouseout', handleMouseOut);
-                el.removeAttribute('contenteditable');
-                el.classList.remove('editable-text-hover');
             });
         };
     }, [saveStateToHistory]);
@@ -222,20 +138,20 @@ const PreviewArea = () => {
         const draggableElements = iframeDoc.querySelectorAll('div,p,h1,h2,h3,h4,h5,h6,section,article,header,footer,img,ul,table,figure');
         draggableElements.forEach(el => el.classList.add('editor-draggable'));
         const getElementsAtPoint = (x, y) => (iframeDoc.elementsFromPoint(x, y) || []).filter(el => !excludedTags.includes(el.tagName)).map(el => ({ el, path: getElementPath(el) }));
+        
         const handleElementMove = (e) => {
             e.preventDefault(); e.stopPropagation();
             const controlledEl = iframeDoc.querySelector(controlledElementPath);
             if (!controlledEl) return;
             const rect = controlledEl.getBoundingClientRect();
-            let newX = e.clientX - rect.width / 2;
-            let newY = e.clientY - rect.height / 2;
             if (window.getComputedStyle(controlledEl).position === 'static') {
                 controlledEl.style.position = 'relative';
             }
             controlledEl.style.position = 'absolute';
-            controlledEl.style.left = `${newX}px`;
-            controlledEl.style.top = `${newY}px`;
+            controlledEl.style.left = `${e.clientX - rect.width / 2}px`;
+            controlledEl.style.top = `${e.clientY - rect.height / 2}px`;
         };
+
         const handleDragClick = (e) => {
             e.preventDefault(); e.stopPropagation();
             if(e.target.id === 'element-picker-root' || e.target.closest('.element-picker-popup')) return;
@@ -261,23 +177,6 @@ const PreviewArea = () => {
     }, [controlledElementPath, saveStateToHistory, setControlledElementPath]);
 
 
-    // --- EFFECT to Handle MODE Changes ---
-    useEffect(() => {
-        const iframeDoc = iframeRef.current?.contentDocument;
-        if (!iframeDoc || !iframeDoc.body || !htmlContent) return;
-        
-        releaseControlledElement();
-        setSelectedElementPaths([]);
-
-        listenerCleanupRef.current();
-
-        if (currentMode === 'text') listenerCleanupRef.current = setupTextListeners(iframeDoc);
-        else if (currentMode === 'select') listenerCleanupRef.current = setupSelectListeners(iframeDoc);
-        else if (currentMode === 'drag') listenerCleanupRef.current = setupDragListeners(iframeDoc);
-        
-    }, [currentMode, htmlContent]); // Depend on htmlContent to re-trigger when file changes
-
-
     // --- EFFECT for Iframe INITIALIZATION on load ---
     useEffect(() => {
         const iframe = iframeRef.current;
@@ -286,10 +185,9 @@ const PreviewArea = () => {
         const handleLoad = () => {
             const iframeDoc = iframe.contentDocument;
             if (!iframeDoc || !iframeDoc.body) return;
+            
+            console.log("✅ Iframe has loaded. Editor is now READY.");
 
-            listenerCleanupRef.current(); // Cleanup from any previous state
-
-            // Initial setup
             if (!iframeDoc.getElementById('editor-styles')) {
                 const styleTag = iframeDoc.createElement('style');
                 styleTag.id = 'editor-styles';
@@ -302,21 +200,50 @@ const PreviewArea = () => {
                 iframeDoc.body.appendChild(pickerRootEl);
             }
             
-            // Setup listeners for the initial/current mode
-            if (currentMode === 'text') listenerCleanupRef.current = setupTextListeners(iframeDoc);
-            else if (currentMode === 'select') listenerCleanupRef.current = setupSelectListeners(iframeDoc);
-            else if (currentMode === 'drag') listenerCleanupRef.current = setupDragListeners(iframeDoc);
-            
+            // This is the "green light". It will trigger the mode-handling effect below.
             setEditorReady(true);
         };
         
         iframe.addEventListener('load', handleLoad);
-        return () => iframe.removeEventListener('load', handleLoad);
-    }, [setupTextListeners, setupSelectListeners, setupDragListeners, setEditorReady, currentMode]); // Add currentMode here
+        return () => {
+            iframe.removeEventListener('load', handleLoad);
+            // When the iframe is about to be unmounted or reloaded, we are no longer ready.
+            setEditorReady(false);
+        };
+    }, [htmlContent, setEditorReady, iframeRef]); // Re-run when htmlContent changes
     
+    // --- EFFECT to Handle MODE Changes (THE FIX IS HERE) ---
+    useEffect(() => {
+        // GATEKEEPER: Do not run this effect until the iframe is loaded and ready.
+        if (!editorReady || !htmlContent) {
+            console.log(`🔌 Mode listeners paused. EditorReady: ${editorReady}`);
+            return;
+        }
+
+        const iframeDoc = iframeRef.current?.contentDocument;
+        if (!iframeDoc || !iframeDoc.body) return;
+        
+        console.log(`🔌 Setting up listeners for "${currentMode}" mode.`);
+        
+        releaseControlledElement();
+        setSelectedElementPaths([]);
+
+        // Cleanup any listeners from the previous mode.
+        listenerCleanupRef.current();
+
+        // Attach new listeners based on the current mode.
+        if (currentMode === 'text') listenerCleanupRef.current = setupTextListeners(iframeDoc);
+        else if (currentMode === 'select') listenerCleanupRef.current = setupSelectListeners(iframeDoc);
+        else if (currentMode === 'drag') listenerCleanupRef.current = setupDragListeners(iframeDoc);
+        
+    // **** THE FIX ****
+    // The dependency array is now stable. It only re-runs when the *data* (mode, content, readiness) changes.
+    }, [currentMode, htmlContent, editorReady]);
+
     
     // --- Other Effects (Visuals) ---
     useEffect(() => {
+        if (!editorReady) return;
         const iframeDoc = iframeRef.current?.contentDocument;
         if (!iframeDoc) return;
         iframeDoc.querySelectorAll('.editor-selected').forEach(el => el.classList.remove('editor-selected'));
@@ -324,9 +251,10 @@ const PreviewArea = () => {
             const el = iframeDoc.querySelector(path);
             if (el) el.classList.add('editor-selected');
         });
-    }, [selectedElementPaths, htmlContent]);
+    }, [selectedElementPaths, htmlContent, editorReady, iframeRef]);
     
     useEffect(() => {
+        if (!editorReady) return;
         const iframeDoc = iframeRef.current?.contentDocument;
         if (!iframeDoc) return;
         const pickerRootEl = iframeDoc.getElementById('element-picker-root');
@@ -351,9 +279,10 @@ const PreviewArea = () => {
         if (pickerState.visible) {
             setTimeout(() => iframeDoc.addEventListener('click', handleClickOutside, { once: true }), 10);
         }
-    }, [pickerState, setControlledElementPath]);
+    }, [pickerState, setControlledElementPath, editorReady, iframeRef]);
     
     useEffect(() => {
+        if (!editorReady) return;
         const iframeDoc = iframeRef.current?.contentDocument;
         if (!iframeDoc) return;
         iframeDoc.querySelectorAll('.element-controlled').forEach(el => el.classList.remove('element-controlled'));
@@ -361,25 +290,10 @@ const PreviewArea = () => {
             const el = iframeDoc.querySelector(controlledElementPath);
             el?.classList.add('element-controlled');
         }
-    }, [controlledElementPath, htmlContent]);
-    
-    useEffect(() => {
-      if(motionActive) alert("Motion feature animation is stubbed.");
-    }, [motionActive]);
+    }, [controlledElementPath, htmlContent, editorReady, iframeRef]);
 
-    // --- RENDER ---
     return (
         <main className="preview-area">
-            {htmlContent && (
-              <button 
-                  id="motionBtn"
-                  className={`motion-button ${motionActive ? 'active' : ''}`}
-                  onClick={() => setMotionActive(p => !p)}
-              >
-                  MOTION
-              </button>
-            )} 
-            
             <HistoryControls />
             <ReleaseButton />
 
