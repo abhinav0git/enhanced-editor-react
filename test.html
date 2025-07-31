@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serene Travels - Discover Your Horizon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Gradient inspired by the JSON color palette */
+        .hero-gradient {
+            background: linear-gradient(to top, #f6b86b, #e7803f, #c8522a, #7c93c0, #3c4e7a);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900">
+
+    <!-- Header / Navigation -->
+    <header class="absolute top-0 left-0 w-full z-30 p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-white">Serene Travels</h1>
+            <nav class="hidden md:flex space-x-6">
+                <a href="#" class="text-white hover:text-opacity-80 transition">Destinations</a>
+                <a href="#" class="text-white hover:text-opacity-80 transition">About Us</a>
+                <a href="#" class="text-white hover:text-opacity-80 transition">Contact</a>
+            </nav>
+            <button class="hidden md:block bg-white text-blue-900 px-4 py-2 rounded-lg font-semibold hover:bg-gray-200 transition">
+                Get Started
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="relative text-white hero-gradient overflow-hidden">
+            <div class="container mx-auto px-4 pt-48 pb-32 flex flex-col items-center justify-center text-center relative z-10">
+                <h2 class="text-5xl md:text-7xl font-bold leading-tight">Discover Your Horizon</h2>
+                <p class="mt-4 text-lg md:text-xl max-w-2xl text-white text-opacity-90">Find peace, adventure, and breathtaking views. Your next journey into the majestic awaits.</p>
+                
+                <!-- Search Form -->
+                <div class="mt-12 w-full max-w-4xl bg-white/20 backdrop-blur-md p-4 rounded-xl shadow-lg">
+                    <form class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                        <div class="md:col-span-2">
+                            <label for="destination" class="sr-only">Destination</label>
+                            <input type="text" id="destination" placeholder="Search for your dream destination..." class="w-full p-3 rounded-lg bg-white text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                        </div>
+                        <div>
+                            <label for="date" class="sr-only">Date</label>
+                            <input type="date" id="date" class="w-full p-3 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                        </div>
+                        <button type="submit" class="w-full p-3 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold transition">
+                            Search
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- SVG Silhouettes for atmosphere -->
+            <div class="absolute bottom-0 left-0 w-full h-1/2 overflow-hidden z-0">
+                 <svg class="absolute bottom-0 left-0 w-full h-full" preserveAspectRatio="none" fill="#1a191a" viewBox="0 0 100 100">
+                    <path d="M0 100 L0 70 Q 15 60, 30 70 T 60 65 T 90 75 L100 70 L100 100 Z" opacity="0.4"></path>
+                    <path d="M0 100 L0 80 Q 20 70, 40 80 T 70 75 T 100 85 L100 100 Z" opacity="0.6"></path>
+                 </svg>
+                 <svg class="absolute bottom-0 left-0 w-full h-full" preserveAspectRatio="none" fill="#000000" viewBox="0 0 100 100">
+                    <path d="M0 100 L0 90 C 5 88, 10 85, 15 90 C 20 95, 25 92, 30 90 C 35 88, 40 90, 45 94 L 50 90 C 55 95, 60 92, 65 90 C 70 88, 75 91, 80 95 L 85 90 C 90 94, 95 91, 100 90 L100 100 Z"></path>
+                </svg>
+            </div>
+        </section>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white">
+        <div class="container mx-auto p-8 text-center">
+            <p>&copy; 2024 Serene Travels. All rights reserved.</p>
+            <div class="mt-4 flex justify-center space-x-6">
+                <a href="#" class="hover:text-gray-400">Facebook</a>
+                <a href="#" class="hover:text-gray-400">Instagram</a>
+                <a href="#" class="hover:text-gray-400">Twitter</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

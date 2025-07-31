@@ -1,0 +1,599 @@
+/* --- Variables --- */
+:root {
+    --color-bg: #fdf6f8;
+    --color-panel-bg: #e0f0ff;
+    --color-preview-bg: #ffffff;
+    --color-border: #a2a8d3;
+    --color-text: #3a3a5c;
+    --color-accent-primary: #ffcce4;
+    --color-accent-primary-text: #8b576e;
+    --color-accent-secondary: #d4f0df;
+    --color-accent-secondary-text: #4a785e;
+    --color-accent-tertiary: #ffd4a3;
+    --color-accent-tertiary-text: #8b6914;
+    --color-selection: #c3b3ff;
+    --color-selection-text: #4a3a7d;
+    --border-width: 3px;
+    --font-main: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-heading: 'Space Mono', 'Courier New', Courier, monospace;
+}
+
+/* --- Base --- */
+/* This is the key change to override boilerplate styles */
+html, body, #root {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+}
+
+body {
+    font-family: var(--font-main);
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    padding: 20px;
+}
+
+/* --- Layout --- */
+.editor-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    max-height: 900px;
+    background-color: var(--color-panel-bg);
+    border: var(--border-width) solid var(--color-border);
+    box-shadow: 8px 8px 0px var(--color-border);
+    overflow: hidden;
+}
+
+.controls {
+    width: 350px;
+    padding: 25px;
+    border-right: var(--border-width) solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+    background-color: var(--color-panel-bg);
+    flex-shrink: 0; /* Prevents controls panel from shrinking */
+}
+
+.controls-panel{
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 1%;
+}
+
+.preview-area {
+    flex-grow: 1; /* This makes it take up remaining space */
+    display: flex;
+    flex-direction: column; /* Ensure wrapper takes full height */
+    background-color: var(--color-preview-bg);
+    padding: 15px;
+    position: relative;
+    min-width: 0; /* Fix for flexbox shrinking issues */
+}
+
+.preview-wrapper {
+    flex-grow: 1; /* This makes it take up remaining vertical space */
+    border: var(--border-width) dashed var(--color-border);
+    position: relative;
+    background-color: #f8f8f8;
+    display: flex; /* Make iframe fill this wrapper */
+}
+
+.preview-wrapper iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+    background-color: white;
+    flex-grow: 1; /* Makes the iframe expand to fill available space */
+}
+
+#previewFrame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+    background-color: white;
+}
+
+/* --- Element Picker Popup --- */
+.element-picker-popup {
+    position: fixed;
+    background: var(--color-panel-bg);
+    border: 3px solid var(--color-border);
+    box-shadow: 6px 6px 0px var(--color-border);
+    padding: 15px;
+    z-index: 10001;
+    max-width: 300px;
+    max-height: 400px;
+    overflow-y: auto;
+    display: none;
+}
+
+.element-picker-popup h4 {
+    margin: 0 0 10px 0;
+    font-family: var(--font-heading);
+    color: var(--color-text);
+    font-size: 1.1em;
+    text-transform: uppercase;
+}
+
+.element-picker-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.element-picker-item {
+    padding: 8px 12px;
+    margin-bottom: 5px;
+    background: white;
+    border: 2px solid var(--color-border);
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+}
+
+.element-picker-item:hover {
+    background: var(--color-accent-primary);
+    color: var(--color-accent-primary-text);
+    transform: translateX(5px);
+}
+
+.element-picker-item .tag-name {
+    font-family: var(--font-heading);
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.element-picker-item .element-info {
+    font-size: 0.85em;
+    opacity: 0.7;
+    margin-top: 2px;
+}
+
+/* --- Motion Button --- */
+.motion-button {
+    position: absolute;
+    top: 0px;
+    right: 15px;
+    z-index: 10;
+    padding: 10px 20px;
+    font-family: var(--font-heading);
+    font-size: 1em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background-color: #ff9ff3;
+    color: #5f3473;
+    border: 3px solid #5f3473;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 4px 4px 0px #5f3473;
+    display: none;
+}
+
+.motion-button:hover {
+    background-color: #5f3473;
+    color: #ff9ff3;
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px #5f3473;
+}
+
+.motion-button.active {
+    background-color: #5f3473;
+    color: #ff9ff3;
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0px #5f3473;
+}
+
+/* --- History Controls --- */
+.history-controls {
+    /* position: absolute; */
+    top: 0px; /* Adjusted to not overlap Motion button */
+    right: 0px;
+    z-index: 10;
+    display: flex;
+    gap: 10px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.history-controls.visible {
+    opacity: 1;
+}
+
+.history-btn {
+    padding: 8px 12px;
+    font-family: var(--font-heading);
+    font-size: 0.85em;
+    text-transform: uppercase;
+    background-color: var(--color-accent-secondary);
+    color: var(--color-accent-secondary-text);
+    border: 2px solid var(--color-accent-secondary-text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 3px 3px 0px var(--color-accent-secondary-text);
+}
+
+.history-btn:hover:not(:disabled) {
+    background-color: var(--color-accent-secondary-text);
+    color: var(--color-accent-secondary);
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px var(--color-accent-secondary-text);
+}
+
+.history-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 3px 3px 0px var(--color-accent-secondary-text);
+}
+
+
+/* --- Release Button --- */
+.release-button {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    z-index: 10;
+    padding: 10px 20px;
+    font-family: var(--font-heading);
+    font-size: 0.9em;
+    text-transform: uppercase;
+    background-color: var(--color-accent-tertiary);
+    color: var(--color-accent-tertiary-text);
+    border: 3px solid var(--color-accent-tertiary-text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 4px 4px 0px var(--color-accent-tertiary-text);
+    display: none;
+}
+
+.release-button:hover {
+    background-color: var(--color-accent-tertiary-text);
+    color: var(--color-accent-tertiary);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px var(--color-accent-tertiary-text);
+}
+
+/* --- Controls Styling --- */
+.title {
+    font-family: var(--font-heading);
+    color: var(--color-text);
+    margin: 0 0 15px 0;
+    font-size: 1.8em;
+    text-align: center;
+    letter-spacing: 1px;
+}
+
+.control-block {
+    border: var(--border-width) solid var(--color-border);
+    padding: 15px;
+    background-color: var(--color-bg);
+}
+
+.control-block h3 {
+    font-family: var(--font-heading);
+    font-size: 1.1em;
+    margin: 0 0 10px 0;
+    color: var(--color-text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* --- Selection Info --- */
+.selection-info {
+    background-color: var(--color-selection);
+    color: var(--color-selection-text);
+    padding: 10px;
+    text-align: center;
+    font-family: var(--font-heading);
+    font-size: 0.9em;
+    border-radius: 3px;
+    margin-bottom: 10px;
+    transition: opacity 0.3s ease;
+}
+
+.selection-info.hidden {
+    opacity: 0;
+    pointer-events: none;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+
+/* --- Property Editor --- */
+.property-editor {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.property-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 10px;
+}
+
+.property-label {
+    flex: 0 0 80px; /* Adjusted size */
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.property-input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 2px solid var(--color-border);
+    background-color: white;
+    font-family: var(--font-main);
+    font-size: 0.9em;
+    color: var(--color-text);
+    min-width: 0;
+}
+
+.property-input:focus {
+    outline: none;
+    border-color: var(--color-accent-primary-text);
+    box-shadow: 0 0 0 3px rgba(255, 204, 228, 0.3);
+}
+
+/* --- Action Buttons --- */
+.action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.action-buttons .btn {
+    padding: 10px 12px;
+    font-size: 0.9em;
+}
+
+/* --- Mode Toggle --- */
+.mode-toggle {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.mode-btn {
+    flex: 1;
+    padding: 8px;
+    font-family: var(--font-heading);
+    font-size: 0.85em;
+    text-align: center;
+    border: 2px solid var(--color-border);
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+}
+
+.mode-btn.active {
+    background-color: var(--color-accent-tertiary);
+    color: var(--color-accent-tertiary-text);
+    border-color: var(--color-accent-tertiary-text);
+}
+
+/* --- Buttons --- */
+.btn {
+    display: block;
+    width: 100%;
+    padding: 12px 15px;
+    font-family: var(--font-heading);
+    font-size: 1em;
+    text-align: center;
+    border: var(--border-width) solid var(--color-text);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-sizing: border-box;
+}
+
+.btn-primary {
+    background-color: var(--color-accent-primary);
+    color: var(--color-accent-primary-text);
+    border-color: var(--color-accent-primary-text);
+}
+
+.btn-primary:hover {
+    background-color: var(--color-accent-primary-text);
+    color: var(--color-accent-primary);
+}
+
+.btn-secondary {
+    background-color: var(--color-accent-secondary);
+    color: var(--color-accent-secondary-text);
+    border-color: var(--color-accent-secondary-text);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-accent-secondary-text);
+    color: var(--color-accent-secondary);
+}
+
+.btn-danger {
+    background-color: #ffb3b3;
+    color: #8b3a3a;
+    border-color: #8b3a3a;
+}
+
+.btn-danger:hover {
+    background-color: #8b3a3a;
+    color: #ffb3b3;
+}
+
+.btn:active:not(:disabled) {
+    transform: translate(2px, 2px);
+}
+
+.btn:disabled {
+    background-color: #e0e0e0;
+    color: #999;
+    border-color: #999;
+    cursor: not-allowed;
+    opacity: 0.7;
+    transform: none;
+}
+
+/* --- File Upload --- */
+.file-upload-block {
+    text-align: center;
+}
+
+.file-name-display {
+    display: block;
+    margin-top: 10px;
+    font-size: 0.85em;
+    color: var(--color-text);
+    opacity: 0.7;
+    word-wrap: break-word;
+}
+
+/* --- Placeholder --- */
+.placeholder-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--font-heading);
+    color: #aaa;
+    text-align: center;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* --- Color Picker --- */
+.color-input-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Override browser defaults for color input to make it look like a swatch */
+.color-preview {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 30px;
+    height: 30px;
+    border: 2px solid var(--color-border);
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    background-color: transparent;
+}
+.color-preview::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+.color-preview::-webkit-color-swatch {
+    border: none;
+    border-radius: 0;
+}
+
+
+.color-value {
+    flex: 1;
+    padding: 6px 10px;
+    border: 2px solid var(--color-border);
+    background-color: white;
+    font-family: var(--font-main);
+    font-size: 0.9em;
+    color: var(--color-text);
+    min-width: 0;
+}
+
+/* --- Instructions --- */
+.instructions {
+    font-size: 0.85em;
+    line-height: 1.4;
+    opacity: 0.8;
+}
+
+.instructions ul {
+    margin: 5px 0;
+    padding-left: 20px;
+}
+
+.instructions li {
+    margin-bottom: 3px;
+}
+
+.kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    background-color: var(--color-accent-tertiary);
+    color: var(--color-accent-tertiary-text);
+    border: 1px solid var(--color-accent-tertiary-text);
+    border-radius: 3px;
+    font-family: var(--font-heading);
+    font-size: 0.85em;
+}
+
+/* --- Motion Settings --- */
+.motion-settings {
+    display: none;
+}
+
+.motion-settings.active {
+    display: block;
+}
+
+.behavior-selector {
+    margin-top: 10px;
+}
+
+.behavior-selector label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.behavior-selector select {
+    width: 100%;
+    padding: 6px 10px;
+    border: 2px solid var(--color-border);
+    background-color: white;
+    font-family: var(--font-main);
+    font-size: 0.9em;
+    color: var(--color-text);
+}
+
+.slider-control {
+    margin-top: 10px;
+}
+
+.slider-control label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.slider-control input[type="range"] {
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+.slider-value {
+    text-align: center;
+    font-size: 0.85em;
+    opacity: 0.7;
+}
