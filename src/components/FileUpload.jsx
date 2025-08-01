@@ -17,9 +17,9 @@ const FileUpload = () => {
   };
 
   return (
-    <div className="control-block file-upload-block">
+    <div className="file-upload-block">
       <button onClick={handleUploadClick} className="btn btn-primary">
-        Upload HTML
+        Upload
       </button>
       <input
         type="file"
@@ -28,9 +28,6 @@ const FileUpload = () => {
         accept=".html, .htm"
         hidden
       />
-      <span className="file-name-display">
-        {htmlFile ? htmlFile.name : 'No file selected.'}
-      </span>
     </div>
   );
 };

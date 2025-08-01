@@ -16,7 +16,6 @@ const ControlsPanel = () => {
   return (
     <aside className="controls">
       <h1 className="title">VISUAL EDITOR PRO</h1>
-      <FileUpload />
 
       {documentState.current && <ModeToggle />}
 
@@ -59,14 +58,15 @@ const ControlsPanel = () => {
 
       <div
         className="control-block download-block"
-        style={{ marginTop: "auto" }}
+        style={{ marginTop: "auto", display: "flex", flexDirection: "row" }}
       >
+        <FileUpload />
         <button
           id="downloadBtn"
           className="btn btn-secondary"
           disabled={downloadDisabled}
         >
-          Download Modified HTML
+          Download
         </button>
       </div>
 
