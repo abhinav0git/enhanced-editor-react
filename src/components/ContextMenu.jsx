@@ -23,8 +23,8 @@ const ContextMenu = ({ position, onAction, onClose }) => {
 
   // Style object to position the menu at the cursor's coordinates.
   const menuStyle = {
-    top: `${position.y + 100}px`,
-    left: `${position.x + 450}px`,
+    top: `${position.y + 110}px`,
+    left: `${position.x + 440}px`,
   };
 
   // This stops the click on a menu item from closing the menu immediately.
