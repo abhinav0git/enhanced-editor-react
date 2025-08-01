@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 
-// --- ROBUST getElementPath FUNCTION WITH THE FINAL FIX ---
 export const getElementPath = (el) => {
     // THE FIX IS HERE:
     // We now check `nodeType` instead of `instanceof Element`.

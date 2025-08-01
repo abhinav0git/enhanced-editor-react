@@ -72,13 +72,13 @@ body {
 }
 
 .preview-area {
-    flex-grow: 1; /* This makes it take up remaining space */
+    flex-grow: 1;
     display: flex;
-    flex-direction: column; /* Ensure wrapper takes full height */
+    flex-direction: column; 
     background-color: var(--color-preview-bg);
-    padding: 15px;
+    padding: 10px;
     position: relative;
-    min-width: 0; /* Fix for flexbox shrinking issues */
+    min-width: 0;
 }
 
 .preview-wrapper {

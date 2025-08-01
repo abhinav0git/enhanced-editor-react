@@ -23,8 +23,8 @@ const ContextMenu = ({ position, onAction, onClose }) => {
 
   // Style object to position the menu at the cursor's coordinates.
   const menuStyle = {
-    top: `${position.y}px`,
-    left: `${position.x}px`,
+    top: `${position.y + 100}px`,
+    left: `${position.x + 450}px`,
   };
 
   // This stops the click on a menu item from closing the menu immediately.
@@ -34,7 +34,6 @@ const ContextMenu = ({ position, onAction, onClose }) => {
 
   return (
     <div className="context-menu" style={menuStyle} onClick={handleMenuClick}>
-      <div className="context-menu-title">Actions</div>
       <button className="context-menu-item" onClick={() => onAction('bringFront')}>Bring Front</button>
       <button className="context-menu-item" onClick={() => onAction('sendBack')}>Send Back</button>
       <button className="context-menu-item" onClick={() => onAction('duplicate')}>Duplicate</button>

@@ -27,7 +27,6 @@ const ControlsPanel = () => {
       <MotionSettings /> {/* Add our new component here */}
 
       {hasSelection && <PropertyEditor />}
-      {/* {hasSelection && <Actions />} */}
 
       {/* {documentState.mode === "text" && <div className="control-block instructions">
         <h3>Instructions</h3>

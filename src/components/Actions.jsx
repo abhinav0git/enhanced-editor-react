@@ -12,7 +12,6 @@ const Actions = () => {
 
     return (
         <div className="control-block actions-block">
-            <h3>Actions</h3>
             <div className="action-buttons">
                 {/* bringFront/sendBack will be added with drag mode */}
                 <button className="btn btn-secondary" id="bringFrontBtn" disabled>Bring Front</button>
